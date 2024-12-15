@@ -1,0 +1,13 @@
+select = ["ALL"]
+
+ignore = [
+    "ANN101", # missing-type-self
+    "ANN102", #	missing-type-cls
+    "D107", # missing __init__ docstrings
+    "T201",   # print found
+    "INP001", # Implicit namespace package
+]
+
+line-length = 100
+indent-width = 4
+target-version = "py311"
