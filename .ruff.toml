@@ -11,6 +11,3 @@ ignore = [
 line-length = 100
 indent-width = 4
 target-version = "py311"
-
-[tool.ruff.lint.pydocstyle]
-convention = "google"
