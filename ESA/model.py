@@ -34,11 +34,7 @@ class MLP(nn.Module):
 
 
 class SelfAttention(nn.Module):
-    """Self Attention module.
-
-    Can be a Masked Attention, depending on
-    wether a mask is given in the forward call.
-    """
+    """Basic self attention module using Flash Attention."""
 
     def __init__(self, config: ESAConfig) -> None:
         super().__init__()
@@ -60,7 +56,15 @@ class SelfAttention(nn.Module):
         self.dropout = config.dropout
 
     def forward(self, x: torch.Tensor, mask: torch.Tensor | None = None) -> torch.Tensor:
-        """Apply the 'masked' or 'self' attention block to a set of input tokens."""
+        """Apply SDPA (Scaled Dot-Product Attention).
+
+        Args:
+            x (torch.Tensor): Features (batch_size, context, n_embd).
+            mask (torch.Tensor | None, optional): Attention mask.
+
+        Returns:
+            torch.Tensor: Output projection.
+        """
         bsz, seq_length, emb_dim = x.size()
 
         # Calculate query, key, values for all heads in batch and move head forward to batch dim
@@ -78,13 +82,9 @@ class SelfAttention(nn.Module):
         # output projection
         return self.resid_dropout(self.c_proj(y))
 
-    def _edge_adjacency_matrix_to_mask(self, matrix: torch.Tensor) -> torch.Tensor:
-        """Tranform an edge adjacency matrix into a usable mask."""
-        return matrix
-
 
 class AttentionBlock(nn.Module):
-    """Attention Block."""
+    """Attention Block ('AB' from the ESA paper)."""
 
     def __init__(self, config: ESAConfig) -> None:
         super().__init__()
@@ -94,7 +94,15 @@ class AttentionBlock(nn.Module):
         self.mlp = MLP(config)
 
     def forward(self, x: torch.Tensor, mask: torch.Tensor | None = None) -> torch.Tensor:
-        """Apply Self or Masked AB to input tokens and mask."""
+        """Apply Self or Masked AB to edge features and mask.
+
+        Args:
+            x (torch.Tensor): Edge features (batch_size, num_edges, n_embd)
+            mask (torch.Tensor | None, optional): Edge adjacency matrix
+
+        Returns:
+            torch.Tensor: Block output projection.
+        """
         x = self.ln_1(x)
         x = x + self.attn(x, mask)
         return x + self.mlp(self.ln_2(x))
@@ -122,11 +130,11 @@ class PoolingModule(nn.Module):
         self.mlp = MLP(config)
 
     def forward(self, z: torch.Tensor) -> torch.Tensor:
-        """Forward pass of the Pooling Module.
+        """Apply PMA to create a graph representation from encoder output.
 
         Args:
             z (torch.Tensor): Tensor of shape (batch_size, num_edges, n_embd)
-                containing edge-level representations.
+                containing edge-level encoder representations.
 
         Returns:
             torch.Tensor: Graph-level representation of shape (batch_size, n_embd)
@@ -136,17 +144,17 @@ class PoolingModule(nn.Module):
         # Expand seed vectors to batch size
         seed_queries = self.seed_vectors.expand(batch_size, -1, -1)
 
-        # Cross-attention: seed vectors attending to edge representations
+        # Cross-attention
         out, _ = self.cross_attention(seed_queries, z, z)
         out = self.layer_norm(out)
         out = out + self.mlp(out)
 
-        # Process pooled representations with SAB layers
+        # Applying 'p' SAB layers (p not given in paper)
         for sab in self.sab_layers:
             out = sab(out)
 
         # Aggregate across seed dimensions (mean or sum)
-        return out.mean(dim=1)  # shape: (batch_size, n_embd)
+        return out.mean(dim=1)
 
 
 @dataclass
@@ -158,7 +166,7 @@ class ESAConfig:
     n_embd: int = 256
     dropout: float = 0.0
     bias: bool = True
-    seeds: int = 4
+    seeds: int = 32
     pool_layers: int = 2
 
 
@@ -166,6 +174,8 @@ class ESA(nn.Module):
     """ESA model.
 
     Implementation of the Edge Set Attention architecture.
+    The model is composed of a succession of Self and Masked Attention Blocks as an encoder,
+    followed by a Pooling by Multi Head Attention module for creating a graph representation.
     """
 
     def __init__(self, config: ESAConfig) -> None:
@@ -208,4 +218,10 @@ if __name__ == "__main__":
     print(model)
 
     n_params = sum(p.numel() for p in model.parameters())
-    print(n_params)
+    print("Parameters:", n_params)
+
+    edges = torch.rand((1, 10, 256))
+    mask = torch.tril(torch.ones(10, 10))
+
+    out = model(edges, mask)
+    print("Output:", out.shape)
