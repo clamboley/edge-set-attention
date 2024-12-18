@@ -55,7 +55,7 @@ class GraphDataset(Dataset):
     def __init__(self, block_size: int) -> None:
         super().__init__()
 
-        self.dataset = TUDataset(root="data/MUTAG", name="MUTAG")
+        self.dataset = TUDataset(root="data", name="MUTAG")
         self.block_size = block_size
 
     def __len__(self) -> int:
