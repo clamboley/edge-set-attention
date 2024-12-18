@@ -3,6 +3,7 @@
 Using a simple graph dataset (MUTAG), transform it into an ESA compatible format.
 """
 import torch
+from torch.nn import functional as F  # noqa: N812
 from torch.utils.data import Dataset
 from torch_geometric.data import Data
 from torch_geometric.datasets import TUDataset
@@ -81,7 +82,6 @@ class GraphDataset(Dataset):
             features = torch.cat([features, torch.zeros(pad_size, features.size(1))], dim=0)
 
             # Pad to block_size on the bottom and right side
-            padding_fn = torch.nn.ZeroPad2d((0, pad_size, 0, pad_size))
-            adjacency_matrix = padding_fn(adjacency_matrix)
+            adjacency_matrix = F.pad(adjacency_matrix, (0, pad_size, 0, pad_size), "constant", 0)
 
         return features, adjacency_matrix, data.y
