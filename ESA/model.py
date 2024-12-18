@@ -74,8 +74,11 @@ class SelfAttention(nn.Module):
         q = q.view(bsz, seq_length, self.n_head, emb_dim // self.n_head).transpose(1, 2)
         v = v.view(bsz, seq_length, self.n_head, emb_dim // self.n_head).transpose(1, 2)
 
+        # Make the mask broadcastable
+        if mask is not None:
+            mask = mask.unsqueeze(1)  # (bsz, 1, L, L)
+
         # Self-attention: (bsz, nh, L, hs) x (bsz, nh, hs, L) -> (bsz, nh, L, L)
-        # Then re-assemble all head outputs side by side
         y = F.scaled_dot_product_attention(q, k, v, attn_mask=mask, dropout_p=self.dropout)
         y = y.transpose(1, 2).contiguous().view(bsz, seq_length, emb_dim)
 
@@ -220,8 +223,8 @@ if __name__ == "__main__":
     n_params = sum(p.numel() for p in model.parameters())
     print("Parameters:", n_params)
 
-    edges = torch.rand((1, 10, 256))
-    mask = torch.tril(torch.ones(10, 10))
+    edges = torch.rand((2, 10, 256))
+    mask = torch.tril(torch.ones(2, 10, 10))
 
     out = model(edges, mask)
     print("Output:", out.shape)
