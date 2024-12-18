@@ -2,6 +2,7 @@
 
 Using a simple graph dataset (MUTAG), transform it into an ESA compatible format.
 """
+
 import torch
 from torch.nn import functional as F  # noqa: N812
 from torch.utils.data import Dataset
@@ -49,7 +50,6 @@ def edge_features(data: Data) -> torch.Tensor:
     return torch.cat([source_features, target_features, edge_attr], dim=1)
 
 
-
 class GraphDataset(Dataset):
     """MUTAG dataset transformed into fixed-size edge features format."""
 
@@ -79,7 +79,7 @@ class GraphDataset(Dataset):
             pad_size = self.block_size - num_edges
 
             # Pad to block_size
-            features = torch.cat([features, torch.zeros(pad_size, features.size(1))], dim=0)
+            features = F.pad(features, (0, 0, 0, pad_size), "constant", 0)
 
             # Pad to block_size on the bottom and right side
             adjacency_matrix = F.pad(adjacency_matrix, (0, pad_size, 0, pad_size), "constant", 0)
