@@ -84,7 +84,7 @@ class GraphDataset(Dataset):
             padding_fn = torch.nn.ZeroPad2d((0, pad_size, 0, pad_size))
             adjacency_matrix = padding_fn(adjacency_matrix)
 
-        return features, adjacency_matrix
+        return features, adjacency_matrix, data.y
 
 
 if __name__ == "__main__":
@@ -93,7 +93,8 @@ if __name__ == "__main__":
     dataloader = DataLoader(dataset, batch_size=4)
 
     for batch in dataloader:
-        features, masks = batch
+        features, masks, labels = batch
         print(features.shape)
         print(masks.shape)
+        print(labels.shape)
         break
