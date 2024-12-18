@@ -3,7 +3,7 @@
 Using a simple graph dataset (MUTAG), transform it into an ESA compatible format.
 """
 import torch
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import Dataset
 from torch_geometric.data import Data
 from torch_geometric.datasets import TUDataset
 
@@ -85,16 +85,3 @@ class GraphDataset(Dataset):
             adjacency_matrix = padding_fn(adjacency_matrix)
 
         return features, adjacency_matrix, data.y
-
-
-if __name__ == "__main__":
-    dataset = GraphDataset(block_size=32)
-
-    dataloader = DataLoader(dataset, batch_size=4)
-
-    for batch in dataloader:
-        features, masks, labels = batch
-        print(features.shape)
-        print(masks.shape)
-        print(labels.shape)
-        break

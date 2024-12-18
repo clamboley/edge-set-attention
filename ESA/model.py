@@ -206,25 +206,3 @@ class ESA(nn.Module):
                 x = block(x, mask)
 
         return self.transformer.pool_mod(x)
-
-
-if __name__ == "__main__":
-    config = ESAConfig(
-        layers="SMMMMMMS",
-        n_head=8,
-        n_embd=256,
-        seeds=4,
-        pool_layers=2,
-    )
-
-    model = ESA(config)
-    print(model)
-
-    n_params = sum(p.numel() for p in model.parameters())
-    print("Parameters:", n_params)
-
-    edges = torch.rand((2, 10, 256))
-    mask = torch.tril(torch.ones(2, 10, 10))
-
-    out = model(edges, mask)
-    print("Output:", out.shape)
