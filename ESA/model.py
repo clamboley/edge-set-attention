@@ -185,6 +185,10 @@ class ESA(nn.Module):
         super().__init__()
         self.config = config
 
+        if not all(c in ["S", "M"] for c in config.layers):
+            msg = "`layers` should only contain 'S' and 'M'"
+            raise ValueError(msg)
+
         self.transformer = nn.ModuleDict(
             {
                 "attn_block": nn.ModuleList([AttentionBlock(config) for _ in config.layers]),
