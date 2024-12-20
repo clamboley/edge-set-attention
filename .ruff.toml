@@ -1,13 +1,10 @@
-select = ["ALL"]
-
-ignore = [
-    "ANN101", # missing-type-self
-    "ANN102", #	missing-type-cls
-    "D107", # missing __init__ docstrings
-    "T201",   # print found
-    "INP001", # Implicit namespace package
-]
-
+lint.select = ["ALL"]
+lint.ignore = ["FA", "D100", "G004", "ANN101", "ANN102"]
 line-length = 100
-indent-width = 4
-target-version = "py311"
+lint.unfixable = ["F401"]
+
+[lint.pydocstyle]
+convention = "google"
+
+[lint.per-file-ignores]
+"tests/*.py" = ["S101"]
