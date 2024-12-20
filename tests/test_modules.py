@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from ESA.model import ESA, MLP, AttentionBlock, ESAConfig, PoolingModule, SelfAttention
+from src.ESA.model import ESA, MLP, AttentionBlock, ESAConfig, PoolingModule, SelfAttention
 
 
 @pytest.fixture

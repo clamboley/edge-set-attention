@@ -2,13 +2,13 @@ import pytest
 import torch
 from torch_geometric.data import Data
 
-from ESA.dataset import edge_adjacency, edge_features
+from src.ESA.processing import edge_adjacency, edge_features
 
 
 @pytest.fixture
 def mock_graph() -> Data:
     """Return a mock ESAConfig object."""
-    # Define 3-dimensiona node features for 6 nodes
+    # Define 3-dimensional node features for 6 nodes
     x = torch.tensor(
         [
             [1.0, 0.0, 0.5],
