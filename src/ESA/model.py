@@ -8,6 +8,7 @@ Pytorch implementation of the paper:
 from __future__ import annotations
 
 import math
+import re
 from dataclasses import dataclass
 
 import torch
@@ -114,8 +115,7 @@ class AttentionBlock(nn.Module):
 class PoolingModule(nn.Module):
     """Pooling by Multi-Head Attention (PMA) module.
 
-    For aggregating edge-level representations
-    into a graph-level representation.
+    For aggregating N edge-level representations into K output representations.
     """
 
     def __init__(self, config: ESAConfig) -> None:
@@ -140,7 +140,7 @@ class PoolingModule(nn.Module):
                 containing edge-level encoder representations.
 
         Returns:
-            torch.Tensor: Graph-level representation of shape (batch_size, n_embd)
+            torch.Tensor: Output representations of shape (batch_size, n_seeds, n_embd)
         """
         batch_size = z.size(0)
 
@@ -156,15 +156,14 @@ class PoolingModule(nn.Module):
         for sab in self.sab_layers:
             out = sab(out)
 
-        # Aggregate across seed dimensions (mean or sum)
-        return out.mean(dim=1)
+        return out
 
 
 @dataclass
 class ESAConfig:
     """Config parameters for ESA architecture."""
 
-    layers: str = "SMMMMMMS"
+    layers: str = "MMSMMSPS"
     n_head: int = 8
     n_embd: int = 256
     dropout: float = 0.0
@@ -178,21 +177,24 @@ class ESA(nn.Module):
 
     Implementation of the Edge Set Attention architecture.
     The model is composed of a succession of Self and Masked Attention Blocks as an encoder,
-    followed by a Pooling by Multi Head Attention module for creating a graph representation.
+    followed by a Pooling by Multi Head Attention module. Some Self Attention Blocks can be
+    added after the pooling module.
     """
 
     def __init__(self, config: ESAConfig) -> None:
         super().__init__()
-        self.config = config
-
-        if not all(c in ["S", "M"] for c in config.layers):
-            msg = "`layers` should only contain 'S' and 'M'"
+        if not bool(re.match(r"^[SM]*P[S]*$", config.layers)):
+            msg = 'Unsupported layers configuration. (Template: "^[SM]*P[S]*$")'
             raise ValueError(msg)
+
+        self.config = config
+        self.enc_blocks, self.out_blocks = config.layers.split("P")
 
         self.transformer = nn.ModuleDict(
             {
-                "attn_block": nn.ModuleList([AttentionBlock(config) for _ in config.layers]),
+                "attn_block": nn.ModuleList([AttentionBlock(config) for _ in self.enc_blocks]),
                 "pool_mod": PoolingModule(config),
+                "out_attn_block": nn.Sequential(*[AttentionBlock(config) for _ in self.out_blocks]),
             },
         )
 
@@ -203,10 +205,12 @@ class ESA(nn.Module):
 
     def forward(self, x: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
         """Apply ESA model to a graph."""
-        for layer, block in zip(self.config.layers, self.transformer.attn_block, strict=True):
+        for layer, block in zip(self.enc_blocks, self.transformer.attn_block, strict=True):
             if layer == "S":
                 x = block(x)
             elif layer == "M":
                 x = block(x, mask)
 
-        return self.transformer.pool_mod(x)
+        x = self.transformer.pool_mod(x)
+        x = self.transformer.out_attn_block(x)
+        return x.mean(dim=1)
