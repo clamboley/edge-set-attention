@@ -8,3 +8,7 @@
 I found this paper really great and wanted to try implementing it in Pytorch.
 
 > NOTE : Everything will not correspond exactelly to the paper since all information is not available, and I already made some changes that I found interesting (For example using the `torch.nn.scaled_dot_product_attention` with the edge adjacency matrix).
+
+## Authors have now released their official code
+
+You can see it here : https://github.com/davidbuterez/edge-set-attention
